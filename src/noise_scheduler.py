@@ -1,5 +1,3 @@
-"""WORK IN PROGRESS — Adding methods and implementation details."""
-
 """Noise scheduler for diffusion models."""
 import logging
 from typing import Optional
@@ -31,3 +29,20 @@ class NoiseScheduler:
             self.betas = np.clip(1 - (f / s), 0.0001, 0.9999)
         self.alphas = 1.0 - self.betas
         self.alphas_cumprod = np.cumprod(self.alphas)
+        self.alphas_cumprod_prev = np.concatenate([[1.0], self.alphas_cumprod[:-1]])
+        self.sqrt_alphas_cumprod = np.sqrt(self.alphas_cumprod)
+        self.sqrt_one_minus_alphas_cumprod = np.sqrt(1.0 - self.alphas_cumprod)
+
+    def add_noise(self, x: np.ndarray, t: int, noise: Optional[np.ndarray] = None) -> tuple:
+        """Add noise at timestep t."""
+        if noise is None:
+            noise = np.random.randn(*x.shape)
+        sqrt_a = self.sqrt_alphas_cumprod[t]
+        sqrt_1ma = self.sqrt_one_minus_alphas_cumprod[t]
+        noisy = sqrt_a * x + sqrt_1ma * noise
+        return noisy, noise
+
+    def get_schedule_stats(self) -> dict:
+        return {"schedule": self.schedule, "num_steps": self.num_steps,
+                "beta_range": f"{self.betas[0]:.5f} → {self.betas[-1]:.5f}",
+                "final_alpha_bar": round(float(self.alphas_cumprod[-1]), 6)}
